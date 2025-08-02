@@ -1,0 +1,36 @@
+{
+  "name": "stb-app",
+  "version": "1.0.0",
+  "description": "Set-Top Box client application for Stalker middleware servers",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8080",
+    "dev": "python -m http.server 8080",
+    "serve": "python -m http.server 8080"
+  },
+  "keywords": [
+    "stb",
+    "set-top-box",
+    "stalker",
+    "middleware",
+    "iptv",
+    "streaming",
+    "tv",
+    "hls",
+    "dash"
+  ],
+  "author": "STB Development Team",
+  "license": "MIT",
+  "dependencies": {
+    "hls.js": "^1.4.12",
+    "dash.js": "^4.7.1"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zalim1/Stb-App.git"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

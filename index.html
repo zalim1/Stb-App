@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STB Client - Stalker Middleware</title>
+    
+    <!-- CSS Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/tv-ui.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23007acc' d='M21 3H3v18h18V3zm-9 10H8v-2h4v2zm6 0h-4v-2h4v2z'/%3E%3C/svg%3E">
+    
+    <!-- External Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dashjs@4.7.1/dist/dash.all.min.js"></script>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>STB Client</h2>
+            <p>Initializing application...</p>
+        </div>
+    </div>
+
+    <!-- Authentication Screen -->
+    <div id="auth-screen" class="screen auth-screen hidden">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h1>STB Client Login</h1>
+                <p>Enter your credentials to access the system</p>
+            </div>
+            <form id="auth-form" class="auth-form">
+                <div class="form-group">
+                    <label for="server-url">Server URL</label>
+                    <input type="url" id="server-url" name="serverUrl" placeholder="http://your-server.com/stalker_portal" required>
+                </div>
+                <div class="form-group">
+                    <label for="mac-address">MAC Address</label>
+                    <input type="text" id="mac-address" name="macAddress" placeholder="00:1A:79:XX:XX:XX" pattern="[0-9A-Fa-f:]{17}" required>
+                </div>
+                <div class="form-group">
+                    <label for="device-token">Device Token (Optional)</label>
+                    <input type="text" id="device-token" name="deviceToken" placeholder="Enter device token">
+                </div>
+                <button type="submit" class="auth-button">
+                    <span class="button-text">Login</span>
+                    <span class="button-spinner hidden"></span>
+                </button>
+                <div id="auth-error" class="auth-error hidden"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application Screen -->
+    <div id="main-screen" class="screen main-screen hidden">
+        <!-- Navigation Header -->
+        <header class="main-header">
+            <div class="header-left">
+                <h1 class="app-title">STB Client</h1>
+                <div class="time-display" id="current-time"></div>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <span id="device-info"></span>
+                </div>
+                <nav class="main-nav">
+                    <button class="nav-button active" data-section="channels">Live TV</button>
+                    <button class="nav-button" data-section="vod">Movies</button>
+                    <button class="nav-button" data-section="series">Series</button>
+                    <button class="nav-button" data-section="epg">TV Guide</button>
+                    <button class="nav-button" data-section="settings">Settings</button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Live TV Section -->
+            <section id="channels-section" class="content-section active">
+                <div class="section-header">
+                    <h2>Live TV Channels</h2>
+                    <div class="section-controls">
+                        <select id="channel-category" class="category-select">
+                            <option value="">All Categories</option>
+                        </select>
+                        <input type="text" id="channel-search" class="search-input" placeholder="Search channels...">
+                    </div>
+                </div>
+                <div id="channels-grid" class="content-grid">
+                    <div class="loading-placeholder">Loading channels...</div>
+                </div>
+            </section>
+
+            <!-- VOD Movies Section -->
+            <section id="vod-section" class="content-section">
+                <div class="section-header">
+                    <h2>Movies</h2>
+                    <div class="section-controls">
+                        <select id="vod-category" class="category-select">
+                            <option value="">All Categories</option>
+                        </select>
+                        <select id="vod-genre" class="category-select">
+                            <option value="">All Genres</option>
+                        </select>
+                        <input type="text" id="vod-search" class="search-input" placeholder="Search movies...">
+                    </div>
+                </div>
+                <div id="vod-grid" class="content-grid">
+                    <div class="loading-placeholder">Loading movies...</div>
+                </div>
+            </section>
+
+            <!-- Series Section -->
+            <section id="series-section" class="content-section">
+                <div class="section-header">
+                    <h2>TV Series</h2>
+                    <div class="section-controls">
+                        <select id="series-category" class="category-select">
+                            <option value="">All Categories</option>
+                        </select>
+                        <input type="text" id="series-search" class="search-input" placeholder="Search series...">
+                    </div>
+                </div>
+                <div id="series-grid" class="content-grid">
+                    <div class="loading-placeholder">Loading series...</div>
+                </div>
+            </section>
+
+            <!-- EPG Section -->
+            <section id="epg-section" class="content-section">
+                <div class="section-header">
+                    <h2>TV Guide</h2>
+                    <div class="section-controls">
+                        <div class="epg-date-nav">
+                            <button id="epg-prev-day" class="nav-button">← Previous</button>
+                            <span id="epg-current-date" class="current-date"></span>
+                            <button id="epg-next-day" class="nav-button">Next →</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="epg-container" class="epg-container">
+                    <div class="loading-placeholder">Loading TV Guide...</div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings-section" class="content-section">
+                <div class="section-header">
+                    <h2>Settings</h2>
+                </div>
+                <div class="settings-container">
+                    <div class="settings-categories">
+                        <button class="settings-category active" data-category="video">Video</button>
+                        <button class="settings-category" data-category="audio">Audio</button>
+                        <button class="settings-category" data-category="network">Network</button>
+                        <button class="settings-category" data-category="parental">Parental</button>
+                        <button class="settings-category" data-category="system">System</button>
+                    </div>
+                    <div class="settings-content">
+                        <div id="settings-video" class="settings-panel active">
+                            <h3>Video Settings</h3>
+                            <div class="setting-item">
+                                <label>Video Quality</label>
+                                <select id="video-quality">
+                                    <option value="auto">Auto</option>
+                                    <option value="1080p">1080p</option>
+                                    <option value="720p">720p</option>
+                                    <option value="480p">480p</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label>Aspect Ratio</label>
+                                <select id="aspect-ratio">
+                                    <option value="auto">Auto</option>
+                                    <option value="16:9">16:9</option>
+                                    <option value="4:3">4:3</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="settings-audio" class="settings-panel">
+                            <h3>Audio Settings</h3>
+                            <div class="setting-item">
+                                <label>Audio Output</label>
+                                <select id="audio-output">
+                                    <option value="stereo">Stereo</option>
+                                    <option value="surround">Surround 5.1</option>
+                                    <option value="auto">Auto</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label>Volume</label>
+                                <input type="range" id="volume-slider" min="0" max="100" value="80">
+                                <span id="volume-value">80%</span>
+                            </div>
+                        </div>
+                        <div id="settings-network" class="settings-panel">
+                            <h3>Network Settings</h3>
+                            <div class="setting-item">
+                                <label>Buffer Size</label>
+                                <select id="buffer-size">
+                                    <option value="small">Small (5s)</option>
+                                    <option value="medium">Medium (10s)</option>
+                                    <option value="large">Large (15s)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="settings-parental" class="settings-panel">
+                            <h3>Parental Controls</h3>
+                            <div class="setting-item">
+                                <label>Parental Lock</label>
+                                <input type="checkbox" id="parental-lock">
+                            </div>
+                            <div class="setting-item">
+                                <label>PIN Code</label>
+                                <input type="password" id="parental-pin" placeholder="Enter PIN">
+                            </div>
+                        </div>
+                        <div id="settings-system" class="settings-panel">
+                            <h3>System Settings</h3>
+                            <div class="setting-item">
+                                <label>Server URL</label>
+                                <input type="url" id="system-server-url" readonly>
+                            </div>
+                            <div class="setting-item">
+                                <label>MAC Address</label>
+                                <input type="text" id="system-mac-address" readonly>
+                            </div>
+                            <button id="logout-button" class="logout-button">Logout</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Video Player Modal -->
+    <div id="player-modal" class="player-modal hidden">
+        <div class="player-container">
+            <video id="video-player" class="video-player" controls autoplay></video>
+            <div class="player-overlay">
+                <div class="player-info">
+                    <h3 id="player-title"></h3>
+                    <p id="player-description"></p>
+                </div>
+                <div class="player-controls">
+                    <button id="player-play-pause" class="control-button">
+                        <span class="play-icon">▶</span>
+                        <span class="pause-icon hidden">⏸</span>
+                    </button>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <div class="time-display">
+                            <span id="current-time-display">00:00</span>
+                            <span>/</span>
+                            <span id="duration-display">00:00</span>
+                        </div>
+                    </div>
+                    <button id="player-fullscreen" class="control-button">⛶</button>
+                    <button id="player-close" class="control-button">✕</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remote Control Help Modal -->
+    <div id="remote-help-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Remote Control Guide</h3>
+            <div class="remote-help">
+                <div class="help-section">
+                    <h4>Navigation</h4>
+                    <ul>
+                        <li><strong>Arrow Keys:</strong> Navigate menu items</li>
+                        <li><strong>Enter/OK:</strong> Select item</li>
+                        <li><strong>Back/Return:</strong> Go back</li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h4>Player Controls</h4>
+                    <ul>
+                        <li><strong>Space/Play:</strong> Play/Pause</li>
+                        <li><strong>+/-:</strong> Volume control</li>
+                        <li><strong>Left/Right:</strong> Seek</li>
+                        <li><strong>F:</strong> Fullscreen</li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h4>Quick Access</h4>
+                    <ul>
+                        <li><strong>1-9:</strong> Channel numbers</li>
+                        <li><strong>Info:</strong> Show program info</li>
+                        <li><strong>Guide:</strong> Open TV guide</li>
+                        <li><strong>Menu:</strong> Main menu</li>
+                    </ul>
+                </div>
+            </div>
+            <button id="close-help" class="modal-close">Close</button>
+        </div>
+    </div>
+
+    <!-- Configuration -->
+    <script src="config/config.js"></script>
+    
+    <!-- JavaScript Modules -->
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/remote.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/channels.js"></script>
+    <script src="js/vod.js"></script>
+    <script src="js/epg.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
